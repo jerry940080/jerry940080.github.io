@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>旅のしおり</title>
+<meta name="description" content="jerry940080 的旅行行程總覽：走過的路線與每一趟的行程網站">
+<meta name="theme-color" content="#f5ead8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5ead8;--card:#fffaf2;--ink:#2a221b;--mute:#7c6f62;--acc:#c67139;--line:#e4d6c0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Figtree,"Noto Sans TC",system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+.cap{font-family:Caprasimo,"Noto Sans TC",serif;font-weight:400}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 60px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:18px}
+.logo{font-size:28px;margin:0}
+.sum{color:var(--mute);font-size:13px}
+.lay{display:grid;grid-template-columns:1.25fr 1fr;gap:22px;align-items:start}
+.mapc{background:var(--card);border-radius:26px;padding:12px;position:sticky;top:16px;box-shadow:0 8px 24px #8c491a14}
+.mapc svg{display:block;width:100%;height:auto;border-radius:18px}
+.mt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 8px 12px}
+.mt b{font-size:22px}.mt span{color:var(--mute);font-size:12.5px}.mt .mb{display:none}
+.leg{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 8px 4px;font-size:12.5px;color:var(--mute)}
+.leg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.leg u{text-decoration:none;display:inline-block;width:22px;border-top:3px solid var(--mute);vertical-align:3px;margin-right:5px}
+.leg u.d{border-top-style:dashed}
+.rt{cursor:pointer;transition:opacity .2s}
+.yr{font-size:30px;margin:6px 0 10px;color:var(--acc)}
+.tl{position:relative;padding-left:22px;margin-bottom:22px}
+.tl:before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.it{position:relative;display:grid;grid-template-columns:92px 1fr;gap:12px;background:var(--card);border-radius:18px;margin-bottom:12px;box-shadow:0 3px 10px #8c491a12;border:2px solid transparent;transition:border-color .15s,transform .15s}
+.it:hover,.it.on{border-color:var(--c)}
+.it:before{content:"";position:absolute;left:-23px;top:22px;width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 0 3px var(--bg)}
+.it .cv{border-radius:16px 0 0 16px;overflow:hidden;min-height:96px;background:var(--c) center/cover no-repeat}
+.it .kan{display:flex;align-items:center;justify-content:center;height:100%;min-height:96px;font-family:Caprasimo,"Noto Sans TC",serif;color:#fff;font-size:26px;letter-spacing:2px;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#fff) 70%,#00000022)}
+.it .b{padding:10px 12px 10px 0;display:flex;flex-direction:column;gap:4px;min-width:0}
+.it h3{margin:0;font-size:17px}
+.it .m{font-size:12.5px;color:var(--mute)}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800}
+.b-plan{background:#fde3cf;color:#8c491a}.b-now{background:#d9e8c7;color:#3d5520}.b-done{background:#e7e0d6;color:#6b5f52}
+.b-tent{background:#efe7f6;color:#5e3f7a}.b-off{background:#f3dada;color:#8a2f2f}
+.empty{background:var(--card);border-radius:18px;padding:20px;color:var(--mute);font-size:14px;line-height:1.7}
+.foot{margin-top:36px;color:var(--mute);font-size:12.5px;line-height:1.8}
+.foot code{background:#00000010;border-radius:4px;padding:0 4px}
+@media (max-width:760px){
+  .lay{grid-template-columns:1fr}.mapc{position:static;padding:8px}.wrap{padding:16px 14px 40px}
+  .mt b{font-size:19px}.logo{font-size:25px}.mt .dk{display:none}.mt .mb{display:inline}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1 class="logo cap">旅のしおり</h1><div class="sum" id="sum">讀取中…</div></div>
+  <div class="lay">
+    <div class="mapc">
+      <div class="mt"><b class="cap">走過的路線</b><span class="dk">滑過右邊的行程，路線會亮起來</span><span class="mb">點下面的行程打開網站</span></div>
+      <div id="map"></div>
+      <div class="leg" id="leg"></div>
+    </div>
+    <div id="list"><div class="empty">讀取行程中…</div></div>
+  </div>
+  <div class="foot" id="foot"></div>
+</div>
+<script src="land.js"></script>
+<script>
+/* 旅のしおり 首頁
+   資料來源（每次打開時讀）：
+   1. GitHub 公開 API 列出 OWNER 的 repo：有 GitHub Pages 的、或有 `trip` 標籤的才看
+   2. 讀各行程網站上的 trip.json（同網域 /<repo>/trip.json）
+   3. API 讀不到（離線、次數用完）時，改用上次的快取；連快取都沒有就試 KNOWN 清單
+   狀態（還有 N 天／旅途中／已完成）依今天的日期當場算。 */
+const OWNER='jerry940080';
+const KNOWN=['IzuAtami-trip','2025-osaka-kanazawa-miokokoen-nagano-tokyo','Osaka_Kyoto_Kobe','TaiwanTrip2026'];
+const SELF=OWNER.toLowerCase()+'.github.io';
+const CK='hub-trips-v1';
+const TODAY=(()=>{const m=/[?&]today=(\d{4}-\d\d-\d\d)/.exec(location.search);return m?new Date(m[1]+'T12:00:00+09:00'):new Date();})();
+
+const D=s=>new Date(s+'T00:00:00+09:00');
+const fmt=s=>{const [y,m,d]=s.split('-').map(Number);return y+'/'+m+'/'+d};
+const rng=t=>fmt(t.start)+' – '+(t.end.slice(0,4)===t.start.slice(0,4)?fmt(t.end).replace(/^\d+\//,''):fmt(t.end));
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function st(t){
+  if(!t.start||!t.end)return {k:'off',n:0,lab:'網站未上線'};
+  const a=D(t.start),b=D(t.end),n=Math.round((b-a)/864e5)+1;
+  if(TODAY<a){const left=Math.ceil((a-TODAY)/864e5);return {k:'plan',n,lab:'還有 '+left+' 天'};}
+  if(TODAY<new Date(b.getTime()+864e5)){return {k:'now',n,lab:'旅途中 · Day '+(Math.floor((TODAY-a)/864e5)+1)};}
+  return {k:'done',n,lab:'已完成'};
+}
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+async function getJSON(u){const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw new Error(r.status);return r.json();}
+async function tripOf(name,repo){
+  const base='/'+name+'/';
+  try{
+    const j=await getJSON(base+'trip.json');
+    return {...j,repo:name,url:base,cover:j.cover?base+j.cover:''};
+  }catch(e){
+    if(repo&&(repo.topics||[]).includes('trip'))   // 有標籤但還沒有 trip.json 或網站沒上線
+      return {repo:name,title:repo.description||name,url:repo.has_pages?base:'https://github.com/'+OWNER+'/'+name,offline:!repo.has_pages,color:'#9a8c7c',kanji:'新',places:[]};
+    return null;
+  }
+}
+async function load(){
+  let names=null,repos={};
+  try{
+    const list=await getJSON('https://api.github.com/users/'+OWNER+'/repos?per_page=100&sort=pushed');
+    list.forEach(r=>repos[r.name]=r);
+    names=list.filter(r=>r.name.toLowerCase()!==SELF&&!r.fork&&(r.has_pages||(r.topics||[]).includes('trip'))).map(r=>r.name);
+  }catch(e){}
+  if(!names)names=KNOWN;
+  const trips=(await Promise.all(names.map(n=>tripOf(n,repos[n])))).filter(Boolean);
+  return {trips,api:Object.keys(repos).length>0};
+}
+
+/* ───── 地圖：台灣的點放左下角小框，其餘自動框範圍 ───── */
+const W=600,H=440;
+function frame(b,X,Y,w,h){const k=Math.cos((b.la0+b.la1)/2*Math.PI/180),s=Math.min(w/((b.lo1-b.lo0)*k),h/(b.la1-b.la0));
+  return (lo,la)=>[X+w/2+(lo-(b.lo0+b.lo1)/2)*k*s,Y+h/2-(la-(b.la0+b.la1)/2)*s];}
+const isTW=(la,lo)=>lo>119&&lo<123&&la>21.5&&la<26.5;
+function bbox(pts,minLo,minLa,pad){
+  let lo0=180,lo1=-180,la0=90,la1=-90;pts.forEach(([la,lo])=>{lo0=Math.min(lo0,lo);lo1=Math.max(lo1,lo);la0=Math.min(la0,la);la1=Math.max(la1,la);});
+  const cl=(lo0+lo1)/2,ca=(la0+la1)/2,sl=Math.max(lo1-lo0,minLo)*(1+pad),sa=Math.max(la1-la0,minLa)*(1+pad);
+  return {lo0:cl-sl/2,lo1:cl+sl/2,la0:ca-sa/2,la1:ca+sa/2};
+}
+function drawMap(trips){
+  const all=[].concat(...trips.map(t=>(t.places||[]).map(p=>[p[1],p[2]])));
+  const tw=all.filter(p=>isTW(...p)),jp=all.filter(p=>!isTW(...p));
+  const inset=tw.length&&jp.length;
+  let IB={x:14,y:H-200,w:130,h:186};
+  let main,pT=null,TB=null;
+  if(!all.length){main=frame({lo0:128,lo1:146,la0:30,la1:45},0,0,W,H);}
+  else if(inset){
+    // 台灣小框放在四個角落中「沒有壓到任何路線點」的那個；都壓到就把主圖範圍放大再試
+    const CORN=[{x:W-144,y:H-200},{x:14,y:H-200},{x:14,y:14},{x:W-144,y:14}];
+    let pad=.18,ok=null;
+    for(let i=0;i<8&&!ok;i++,pad+=.25){
+      const b=bbox(jp,5,3.5,pad),f=frame(b,0,0,W,H),P=jp.map(([la,lo])=>f(lo,la));
+      for(const c of CORN){const box={x:c.x-10,y:c.y-10,w:150,h:206};
+        if(!P.some(p=>p[0]>box.x&&p[0]<box.x+box.w&&p[1]>box.y&&p[1]<box.y+box.h)){ok={f,c};break;}}
+      if(!ok&&i===7)ok={f,c:CORN[0]};
+    }
+    main=ok.f;IB={x:ok.c.x,y:ok.c.y,w:130,h:186};TB=bbox(tw,2.2,3,.12);pT=frame(TB,IB.x,IB.y,IB.w,IB.h);
+  }else main=frame(bbox(all,4,3,.2),0,0,W,H);
+  const px=(la,lo)=>inset&&isTW(la,lo)?pT(lo,la):main(lo,la);
+  const ring=(f,r)=>'M'+r.map(p=>f(p[0],p[1]).map(v=>v.toFixed(1)).join(',')).join('L')+'Z';
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="走過的路線地圖"><defs><clipPath id="ct"><rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12"/></clipPath></defs><rect width="${W}" height="${H}" fill="#d7e3ea"/>`;
+  s+=`<path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.map(r=>ring(main,r)).join('')}"/>`;
+  if(inset)s+=`<rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12" fill="#d7e3ea" stroke="#b9a98f" stroke-width="1.5"/><g clip-path="url(#ct)"><path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.filter(r=>r.some(p=>p[0]>TB.lo0-2&&p[0]<TB.lo1+2&&p[1]>TB.la0-2&&p[1]<TB.la1+2)).map(r=>ring(pT,r)).join('')}"/></g><text x="${IB.x+10}" y="${IB.y+17}" font-size="11" fill="#7c6f62" font-family="Noto Sans TC">台灣</text>`;
+  const boxes=[];
+  const hit=(a)=>boxes.some(b=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y);
+  trips.forEach(t=>{
+    const P=(t.places||[]).map(p=>px(p[1],p[2]));if(!P.length)return;
+    const dn=st(t).k==='done';
+    const d='M'+P.map(p=>p.map(v=>v.toFixed(1)).join(',')).join('L');
+    s+=`<g class="rt" data-r="${esc(t.repo)}"><path d="${d}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="${d}" fill="none" stroke="${esc(t.color)}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"${dn?'':' stroke-dasharray="7 6"'}/>`;
+    const seen=new Set();P.forEach(p=>{const key=p.map(Math.round).join();if(seen.has(key))return;seen.add(key);s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2" fill="#fff" stroke="${esc(t.color)}" stroke-width="2.4"/>`;});
+    // 標籤：在路線各點周圍找一個不重疊的位置
+    const lw=[...(t.kanji||'')].length*15+16,lh=20;let best=null;
+    for(const p of P){for(const [dx,dy] of [[10,-26],[10,6],[-lw-10,-26],[-lw-10,6]]){const b={x:p[0]+dx,y:p[1]+dy,w:lw,h:lh};
+      if(b.x<4||b.y<4||b.x+b.w>W-4||b.y+b.h>H-4)continue;if(!hit(b)){best=b;break;}}if(best)break;}
+    if(!best)best={x:P[0][0]+10,y:P[0][1]-26,w:lw,h:lh};boxes.push(best);
+    s+=`<g transform="translate(${best.x.toFixed(1)},${best.y.toFixed(1)})"><rect width="${lw}" height="${lh}" rx="10" fill="${esc(t.color)}"/><text x="8" y="14.5" font-size="13" font-weight="800" fill="#fff" font-family="Noto Sans TC,sans-serif">${esc(t.kanji)}</text></g></g>`;
+  });
+  s+='</svg>';
+  document.getElementById('map').innerHTML=s;
+  document.getElementById('leg').innerHTML='<span><u></u>去過</span><span><u class="d"></u>規劃中</span>'+trips.filter(t=>t.places&&t.places.length).map(t=>`<span><i style="background:${esc(t.color)}"></i>${esc(t.title)}</span>`).join('');
+}
+
+function cardHTML(t){
+  const s=st(t);const cv=t.cover?`<div class="cv" style="background-image:url('${esc(t.cover)}')"></div>`:`<div class="cv"><div class="kan">${esc(t.kanji||'')}</div></div>`;
+  const b=`<span class="badge b-${t.offline?'off':s.k}">${t.offline?'網站未上線':s.lab}</span>`+(t.tentative?'<span class="badge b-tent">日期暫定</span>':'');
+  const meta=t.start?`<div class="m">${rng(t)}・${s.n} 天</div>`:'';
+  const pl=(t.places||[]).map(p=>p[0]).filter((x,i,a)=>x!==a[i-1]);
+  return `<a class="it" href="${esc(t.url)}" data-r="${esc(t.repo)}" style="--c:${esc(t.color)}">${cv}<div class="b"><div class="badges">${b}</div><h3 class="cap">${esc(t.title)}</h3>${meta}${pl.length?`<div class="m">${esc(pl.join(' → '))}</div>`:''}</div></a>`;
+}
+function render(data,when){
+  const trips=data.trips.slice().sort((a,b)=>(b.start||'9999')>(a.start||'9999')?1:-1);
+  const ys={};trips.forEach(t=>{const y=t.start?t.start.slice(0,4):'未定';(ys[y]=ys[y]||[]).push(t);});
+  document.getElementById('list').innerHTML=trips.length?Object.keys(ys).sort().reverse().map(y=>`<div class="yr cap">${y}</div><div class="tl">${ys[y].map(cardHTML).join('')}</div>`).join(''):'<div class="empty">還沒有讀到任何行程。行程 repo 要開 GitHub Pages，並在網站根目錄放 trip.json。</div>';
+  drawMap(trips);
+  const cnt={plan:0,done:0};trips.forEach(t=>{const k=st(t).k;if(k==='done')cnt.done++;else if(k!=='off')cnt.plan++;});
+  document.getElementById('sum').textContent=`${trips.length} 趟・去過 ${cnt.done}・規劃中 ${cnt.plan}`;
+  document.getElementById('foot').innerHTML=`資料${when?'更新於 '+when:'來自上次的快取'}，每次打開都會從 GitHub 重新讀取。新增行程：行程 repo 開 GitHub Pages，網站根目錄放 <code>trip.json</code>（標題、日期、地點）就會自動出現；加上 <code>trip</code> 標籤，網站還沒上線也會列出來。`;
+  const hl=r=>document.querySelectorAll('.rt').forEach(g=>g.style.opacity=!r||g.dataset.r===r?1:.15);
+  document.querySelectorAll('.it').forEach(a=>{a.onmouseenter=()=>hl(a.dataset.r);a.onmouseleave=()=>hl(null);});
+  document.querySelectorAll('.rt').forEach(g=>{g.onclick=()=>{const t=trips.find(x=>x.repo===g.dataset.r);if(t)location.href=t.url;};
+    g.onmouseenter=()=>{hl(g.dataset.r);document.querySelectorAll('.it').forEach(a=>a.classList.toggle('on',a.dataset.r===g.dataset.r));};
+    g.onmouseleave=()=>{hl(null);document.querySelectorAll('.it.on').forEach(a=>a.classList.remove('on'));};});
+}
+(async()=>{
+  const c=lsGet(CK);if(c&&c.trips)render(c,null);
+  const d=await load();
+  if(!d.api&&c&&c.trips)return;   // API 讀不到（離線、次數用完）就維持快取，不用 KNOWN 清單蓋掉
+  if(d.trips.length||!c){const now=new Date();const when=now.getMonth()+1+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    render(d,when);if(d.trips.length)lsSet(CK,{trips:d.trips,ts:Date.now()});}
+})();
+</script>
+</body>
+</html>
