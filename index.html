@@ -6,6 +6,13 @@
 <title>旅のしおり</title>
 <meta name="description" content="jerry940080 的旅行行程總覽：走過的路線與每一趟的行程網站">
 <meta name="theme-color" content="#f5ead8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="旅のしおり">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
@@ -46,6 +53,21 @@ a{color:inherit;text-decoration:none}
 .empty{background:var(--card);border-radius:18px;padding:20px;color:var(--mute);font-size:14px;line-height:1.7}
 .foot{margin-top:36px;color:var(--mute);font-size:12.5px;line-height:1.8}
 .foot code{background:#00000010;border-radius:4px;padding:0 4px}
+.mob{display:none}
+.mmap{border-radius:22px;overflow:hidden;box-shadow:0 4px 14px #8c491a14;background:#d7e3ea}
+.car{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:14px 11% 8px;margin:0 -14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.car::-webkit-scrollbar{display:none}
+.mc{flex:0 0 78%;scroll-snap-align:center;background:var(--card);border-radius:22px;overflow:hidden;box-shadow:0 4px 14px #8c491a18;border:3px solid transparent;transition:border-color .2s,transform .2s;transform:scale(.96)}
+.mc.on{border-color:var(--c);transform:none}
+.mc .cv{height:128px;background:var(--c) center/cover no-repeat}
+.mc .kan{display:flex;align-items:center;justify-content:center;height:128px;font-family:Caprasimo,"Noto Sans TC",serif;color:#fff;font-size:40px;letter-spacing:3px;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#fff) 70%,#00000022)}
+.mc .b{padding:10px 14px 14px;display:flex;flex-direction:column;gap:4px}
+.mc h3{margin:0;font-size:19px}.mc .m{font-size:12.5px;color:var(--mute);line-height:1.5}
+.mc .go{align-self:flex-start;margin-top:6px;background:var(--ink);color:#fff;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:800}
+.dots{display:flex;justify-content:center;gap:6px;padding:4px 0 2px}
+.dots i{width:7px;height:7px;border-radius:4px;background:#d9cbb6;transition:width .2s,background .2s}.dots i.on{width:20px;background:var(--acc)}
+.mhint{text-align:center;font-size:12.5px;color:var(--mute);margin:10px 0 0}
+@media (max-width:640px){.lay{display:none}.mob{display:block}.foot{margin-top:22px}}
 @media (max-width:760px){
   .lay{grid-template-columns:1fr}.mapc{position:static;padding:8px}.wrap{padding:16px 14px 40px}
   .mt b{font-size:19px}.logo{font-size:25px}.mt .dk{display:none}.mt .mb{display:inline}
@@ -62,6 +84,12 @@ a{color:inherit;text-decoration:none}
       <div class="leg" id="leg"></div>
     </div>
     <div id="list"><div class="empty">讀取行程中…</div></div>
+  </div>
+  <div class="mob">
+    <div class="mmap" id="mmap"></div>
+    <div class="car" id="car"></div>
+    <div class="dots" id="dots"></div>
+    <div class="mhint">左右滑動切換行程，地圖跟著亮起那一趟；點卡片打開網站</div>
   </div>
   <div class="foot" id="foot"></div>
 </div>
@@ -118,7 +146,7 @@ async function load(){
 }
 
 /* ───── 地圖：台灣的點放左下角小框，其餘自動框範圍 ───── */
-const W=600,H=440;
+let W=600,H=440;
 function frame(b,X,Y,w,h){const k=Math.cos((b.la0+b.la1)/2*Math.PI/180),s=Math.min(w/((b.lo1-b.lo0)*k),h/(b.la1-b.la0));
   return (lo,la)=>[X+w/2+(lo-(b.lo0+b.lo1)/2)*k*s,Y+h/2-(la-(b.la0+b.la1)/2)*s];}
 const isTW=(la,lo)=>lo>119&&lo<123&&la>21.5&&la<26.5;
@@ -127,30 +155,31 @@ function bbox(pts,minLo,minLa,pad){
   const cl=(lo0+lo1)/2,ca=(la0+la1)/2,sl=Math.max(lo1-lo0,minLo)*(1+pad),sa=Math.max(la1-la0,minLa)*(1+pad);
   return {lo0:cl-sl/2,lo1:cl+sl/2,la0:ca-sa/2,la1:ca+sa/2};
 }
-function drawMap(trips){
+function drawMap(trips,el,w,h,fs,legEl){W=w;H=h;fs=fs||13;
   const all=[].concat(...trips.map(t=>(t.places||[]).map(p=>[p[1],p[2]])));
   const tw=all.filter(p=>isTW(...p)),jp=all.filter(p=>!isTW(...p));
   const inset=tw.length&&jp.length;
-  let IB={x:14,y:H-200,w:130,h:186};
+  const ih=Math.round(H*.42),iw=Math.round(ih*.7),mg=W<500?10:14;
+  let IB={x:mg,y:H-ih-mg,w:iw,h:ih};
   let main,pT=null,TB=null;
   if(!all.length){main=frame({lo0:128,lo1:146,la0:30,la1:45},0,0,W,H);}
   else if(inset){
     // 台灣小框放在四個角落中「沒有壓到任何路線點」的那個；都壓到就把主圖範圍放大再試
-    const CORN=[{x:W-144,y:H-200},{x:14,y:H-200},{x:14,y:14},{x:W-144,y:14}];
+    const CORN=[{x:W-iw-mg,y:H-ih-mg},{x:mg,y:H-ih-mg},{x:mg,y:mg},{x:W-iw-mg,y:mg}];
     let pad=.18,ok=null;
     for(let i=0;i<8&&!ok;i++,pad+=.25){
       const b=bbox(jp,5,3.5,pad),f=frame(b,0,0,W,H),P=jp.map(([la,lo])=>f(lo,la));
-      for(const c of CORN){const box={x:c.x-10,y:c.y-10,w:150,h:206};
+      for(const c of CORN){const box={x:c.x-10,y:c.y-10,w:iw+20,h:ih+20};
         if(!P.some(p=>p[0]>box.x&&p[0]<box.x+box.w&&p[1]>box.y&&p[1]<box.y+box.h)){ok={f,c};break;}}
       if(!ok&&i===7)ok={f,c:CORN[0]};
     }
-    main=ok.f;IB={x:ok.c.x,y:ok.c.y,w:130,h:186};TB=bbox(tw,2.2,3,.12);pT=frame(TB,IB.x,IB.y,IB.w,IB.h);
+    main=ok.f;IB={x:ok.c.x,y:ok.c.y,w:iw,h:ih};TB=bbox(tw,2.2,3,.12);pT=frame(TB,IB.x,IB.y,IB.w,IB.h);
   }else main=frame(bbox(all,4,3,.2),0,0,W,H);
   const px=(la,lo)=>inset&&isTW(la,lo)?pT(lo,la):main(lo,la);
   const ring=(f,r)=>'M'+r.map(p=>f(p[0],p[1]).map(v=>v.toFixed(1)).join(',')).join('L')+'Z';
-  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="走過的路線地圖"><defs><clipPath id="ct"><rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12"/></clipPath></defs><rect width="${W}" height="${H}" fill="#d7e3ea"/>`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="走過的路線地圖"><defs><clipPath id="ct${W}"><rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12"/></clipPath></defs><rect width="${W}" height="${H}" fill="#d7e3ea"/>`;
   s+=`<path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.map(r=>ring(main,r)).join('')}"/>`;
-  if(inset)s+=`<rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12" fill="#d7e3ea" stroke="#b9a98f" stroke-width="1.5"/><g clip-path="url(#ct)"><path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.filter(r=>r.some(p=>p[0]>TB.lo0-2&&p[0]<TB.lo1+2&&p[1]>TB.la0-2&&p[1]<TB.la1+2)).map(r=>ring(pT,r)).join('')}"/></g><text x="${IB.x+10}" y="${IB.y+17}" font-size="11" fill="#7c6f62" font-family="Noto Sans TC">台灣</text>`;
+  if(inset)s+=`<rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12" fill="#d7e3ea" stroke="#b9a98f" stroke-width="1.5"/><g clip-path="url(#ct${W})"><path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.filter(r=>r.some(p=>p[0]>TB.lo0-2&&p[0]<TB.lo1+2&&p[1]>TB.la0-2&&p[1]<TB.la1+2)).map(r=>ring(pT,r)).join('')}"/></g><text x="${IB.x+10}" y="${IB.y+17}" font-size="11" fill="#7c6f62" font-family="Noto Sans TC">台灣</text>`;
   const boxes=[];
   const hit=(a)=>boxes.some(b=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y);
   trips.forEach(t=>{
@@ -160,15 +189,15 @@ function drawMap(trips){
     s+=`<g class="rt" data-r="${esc(t.repo)}"><path d="${d}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="${d}" fill="none" stroke="${esc(t.color)}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"${dn?'':' stroke-dasharray="7 6"'}/>`;
     const seen=new Set();P.forEach(p=>{const key=p.map(Math.round).join();if(seen.has(key))return;seen.add(key);s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2" fill="#fff" stroke="${esc(t.color)}" stroke-width="2.4"/>`;});
     // 標籤：在路線各點周圍找一個不重疊的位置
-    const lw=[...(t.kanji||'')].length*15+16,lh=20;let best=null;
-    for(const p of P){for(const [dx,dy] of [[10,-26],[10,6],[-lw-10,-26],[-lw-10,6]]){const b={x:p[0]+dx,y:p[1]+dy,w:lw,h:lh};
+    const lw=[...(t.kanji||'')].length*(fs+2)+16,lh=fs+7;let best=null;
+    for(const p of P){for(const [dx,dy] of [[10,-lh-6],[10,6],[-lw-10,-lh-6],[-lw-10,6]]){const b={x:p[0]+dx,y:p[1]+dy,w:lw,h:lh};
       if(b.x<4||b.y<4||b.x+b.w>W-4||b.y+b.h>H-4)continue;if(!hit(b)){best=b;break;}}if(best)break;}
-    if(!best)best={x:P[0][0]+10,y:P[0][1]-26,w:lw,h:lh};boxes.push(best);
-    s+=`<g transform="translate(${best.x.toFixed(1)},${best.y.toFixed(1)})"><rect width="${lw}" height="${lh}" rx="10" fill="${esc(t.color)}"/><text x="8" y="14.5" font-size="13" font-weight="800" fill="#fff" font-family="Noto Sans TC,sans-serif">${esc(t.kanji)}</text></g></g>`;
+    if(!best)best={x:P[0][0]+10,y:P[0][1]-lh-6,w:lw,h:lh};boxes.push(best);
+    s+=`<g transform="translate(${best.x.toFixed(1)},${best.y.toFixed(1)})"><rect width="${lw}" height="${lh}" rx="${lh/2}" fill="${esc(t.color)}"/><text x="8" y="${(lh/2+fs*.36).toFixed(1)}" font-size="${fs}" font-weight="800" fill="#fff" font-family="Noto Sans TC,sans-serif">${esc(t.kanji)}</text></g></g>`;
   });
   s+='</svg>';
-  document.getElementById('map').innerHTML=s;
-  document.getElementById('leg').innerHTML='<span><u></u>去過</span><span><u class="d"></u>規劃中</span>'+trips.filter(t=>t.places&&t.places.length).map(t=>`<span><i style="background:${esc(t.color)}"></i>${esc(t.title)}</span>`).join('');
+  el.innerHTML=s;
+  if(legEl)legEl.innerHTML='<span><u></u>去過</span><span><u class="d"></u>規劃中</span>'+trips.filter(t=>t.places&&t.places.length).map(t=>`<span><i style="background:${esc(t.color)}"></i>${esc(t.title)}</span>`).join('');
 }
 
 function cardHTML(t){
@@ -178,17 +207,37 @@ function cardHTML(t){
   const pl=(t.places||[]).map(p=>p[0]).filter((x,i,a)=>x!==a[i-1]);
   return `<a class="it" href="${esc(t.url)}" data-r="${esc(t.repo)}" style="--c:${esc(t.color)}">${cv}<div class="b"><div class="badges">${b}</div><h3 class="cap">${esc(t.title)}</h3>${meta}${pl.length?`<div class="m">${esc(pl.join(' → '))}</div>`:''}</div></a>`;
 }
+/* ───── 手機（≤640px）：地圖在上、卡片左右滑，滑到哪趟地圖就亮哪趟 ───── */
+function renderMob(trips){
+  const rank=t=>{const k=st(t).k;return k==='now'?0:k==='plan'?1:k==='done'?2:3;};
+  const L=trips.slice().sort((a,b)=>rank(a)-rank(b)||(rank(a)===2?((b.start||'')>(a.start||'')?1:-1):((a.start||'9999')>(b.start||'9999')?1:-1)));
+  const car=document.getElementById('car'),dots=document.getElementById('dots'),mm=document.getElementById('mmap');
+  drawMap(L,mm,390,330,15);
+  car.innerHTML=L.length?L.map(t=>{const s=st(t);const cv=t.cover?`<div class="cv" style="background-image:url('${esc(t.cover)}')"></div>`:`<div class="kan">${esc(t.kanji||'')}</div>`;
+    const pl=(t.places||[]).map(p=>p[0]).filter((x,i,a)=>x!==a[i-1]&&!/機場/.test(x));
+    return `<a class="mc" href="${esc(t.url)}" data-r="${esc(t.repo)}" style="--c:${esc(t.color)}">${cv}<div class="b"><div class="badges"><span class="badge b-${t.offline?'off':s.k}">${t.offline?'網站未上線':s.lab}</span>${t.tentative?'<span class="badge b-tent">日期暫定</span>':''}</div><h3 class="cap">${esc(t.title)}</h3>${t.start?`<div class="m">${rng(t)}・${s.n} 天</div>`:''}${pl.length?`<div class="m">${esc(pl.join(' → '))}</div>`:''}<span class="go">打開行程 →</span></div></a>`;}).join(''):'<div class="empty" style="flex:1">還沒有讀到任何行程。</div>';
+  dots.innerHTML=L.map(()=>'<i></i>').join('');
+  const cards=[...car.querySelectorAll('.mc')];let cur=-1;
+  const sel=i=>{if(i===cur||!cards[i])return;cur=i;const r=cards[i].dataset.r;
+    cards.forEach((c,j)=>c.classList.toggle('on',j===i));[...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));
+    mm.querySelectorAll('.rt').forEach(g=>g.style.opacity=g.dataset.r===r?1:.15);};
+  const near=()=>{const m=car.scrollLeft+car.clientWidth/2;let bi=0,bd=1e9;cards.forEach((c,i)=>{const d=Math.abs(c.offsetLeft+c.offsetWidth/2-m);if(d<bd){bd=d;bi=i;}});return bi;};
+  let tm=0;car.onscroll=()=>{cancelAnimationFrame(tm);tm=requestAnimationFrame(()=>sel(near()));};
+  mm.querySelectorAll('.rt').forEach(g=>{g.onclick=()=>{const i=cards.findIndex(c=>c.dataset.r===g.dataset.r);if(i>=0){cards[i].scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});sel(i);}};});
+  sel(0);
+}
 function render(data,when){
   const trips=data.trips.slice().sort((a,b)=>(b.start||'9999')>(a.start||'9999')?1:-1);
   const ys={};trips.forEach(t=>{const y=t.start?t.start.slice(0,4):'未定';(ys[y]=ys[y]||[]).push(t);});
   document.getElementById('list').innerHTML=trips.length?Object.keys(ys).sort().reverse().map(y=>`<div class="yr cap">${y}</div><div class="tl">${ys[y].map(cardHTML).join('')}</div>`).join(''):'<div class="empty">還沒有讀到任何行程。行程 repo 要開 GitHub Pages，並在網站根目錄放 trip.json。</div>';
-  drawMap(trips);
+  drawMap(trips,document.getElementById('map'),600,440,13,document.getElementById('leg'));
+  renderMob(trips);
   const cnt={plan:0,done:0};trips.forEach(t=>{const k=st(t).k;if(k==='done')cnt.done++;else if(k!=='off')cnt.plan++;});
   document.getElementById('sum').textContent=`${trips.length} 趟・去過 ${cnt.done}・規劃中 ${cnt.plan}`;
   document.getElementById('foot').innerHTML=`資料${when?'更新於 '+when:'來自上次的快取'}，每次打開都會從 GitHub 重新讀取。新增行程：行程 repo 開 GitHub Pages，網站根目錄放 <code>trip.json</code>（標題、日期、地點）就會自動出現；加上 <code>trip</code> 標籤，網站還沒上線也會列出來。`;
-  const hl=r=>document.querySelectorAll('.rt').forEach(g=>g.style.opacity=!r||g.dataset.r===r?1:.15);
+  const hl=r=>document.querySelectorAll('#map .rt').forEach(g=>g.style.opacity=!r||g.dataset.r===r?1:.15);
   document.querySelectorAll('.it').forEach(a=>{a.onmouseenter=()=>hl(a.dataset.r);a.onmouseleave=()=>hl(null);});
-  document.querySelectorAll('.rt').forEach(g=>{g.onclick=()=>{const t=trips.find(x=>x.repo===g.dataset.r);if(t)location.href=t.url;};
+  document.querySelectorAll('#map .rt').forEach(g=>{g.onclick=()=>{const t=trips.find(x=>x.repo===g.dataset.r);if(t)location.href=t.url;};
     g.onmouseenter=()=>{hl(g.dataset.r);document.querySelectorAll('.it').forEach(a=>a.classList.toggle('on',a.dataset.r===g.dataset.r));};
     g.onmouseleave=()=>{hl(null);document.querySelectorAll('.it.on').forEach(a=>a.classList.remove('on'));};});
 }

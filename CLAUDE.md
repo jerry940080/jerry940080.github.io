@@ -11,6 +11,14 @@
 - `land.js`：地圖海岸線 `const LAND`（Natural Earth 10m，範圍東經 117–147、北緯 20–46.5，涵蓋日本、台灣、韓國）。
   行程跑出這個範圍（例如歐洲）時，用 trip-guide skill 的 `scripts/make_geo.py --src world` 重產並放大範圍。
 
+## 版面
+- **電腦（>640px）**：左邊路線地圖（600×440，sticky）＋右邊依年份的時間軸卡片；滑過卡片或路線互相標亮。
+- **手機（≤640px，使用者看過 M1／M2／M3 三款樣板後選 M3）**：上面地圖（390×330、標籤字 15），下面卡片左右滑（scroll-snap），
+  滑到哪一張地圖就只亮那一趟、下方圓點跟著動；點地圖上的路線會捲到那張卡片。卡片順序：旅途中 → 規劃中（近到遠）→ 已完成（新到舊）。
+  `drawMap(trips,el,w,h,fs,legEl)` 桌機與手機共用，台灣小框大小依地圖高度算。兩套 DOM 都會畫，用 CSS 切換顯示。
+- **加到主畫面**：`manifest.webmanifest`＋`icons/`（「旅」字＋虛線路線，PIL 畫的）。`scope` 刻意設成 `/index.html`，
+  點進行程網站時會開在 App 內建的瀏覽器（有「完成」鈕可回來），不會卡在沒有返回鍵的全螢幕裡。**仍然不裝 service worker**。
+
 ## 資料怎麼來（每次打開首頁時即時讀）
 1. GitHub 公開 API `users/jerry940080/repos`：挑出有 GitHub Pages、或有 `trip` 標籤的 repo（排除本 repo 與 fork）。
 2. 讀每個行程網站上的 `/<repo>/trip.json`（同網域，不受 API 次數限制）。讀得到就是一張卡；讀不到但有 `trip` 標籤的，顯示 repo 簡介＋「網站未上線」。
