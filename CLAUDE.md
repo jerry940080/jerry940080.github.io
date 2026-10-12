@@ -15,7 +15,10 @@
 - **電腦（>640px）**：左邊路線地圖（600×440，sticky）＋右邊依年份的時間軸卡片；滑過卡片或路線互相標亮。
 - **手機（≤640px，使用者看過 M1／M2／M3 三款樣板後選 M3）**：上面地圖（390×330、標籤字 15），下面卡片左右滑（scroll-snap），
   滑到哪一張地圖就只亮那一趟、下方圓點跟著動；點地圖上的路線會捲到那張卡片。卡片順序：旅途中 → 規劃中（近到遠）→ 已完成（新到舊）。
-  `drawMap(trips,el,w,h,fs,legEl)` 桌機與手機共用，台灣小框大小依地圖高度算。兩套 DOM 都會畫，用 CSS 切換顯示。
+  `drawMap(trips,el,w,h,fs,legEl,c)` 桌機與手機共用（c 是國家分頁），台灣小框大小依地圖高度算。兩套 DOM 都會畫，用 CSS 切換顯示。
+- **國家分頁（使用者看過 A／B／C 三款樣板後選 A）**：地圖上方（手機在地圖上方）一排「全部／日本／台灣」分頁，記在 localStorage `hub-tab`。
+  選日本或台灣時，地圖只畫那一國並自動框範圍（台灣框整個島、不用小框），時間軸／橫滑卡片也只留那一國；「全部」維持原本的日本大圖＋台灣小框，卡片多一個國家標籤。
+  國家看 trip.json 的 `country`（`"jp"`／`"tw"`），沒寫就看 `places` 是否全在台灣（含金門、馬祖），其餘算日本。要加第三個國家時，在 `CN` 加一筆並調整 `ctry()`。
 - **加到主畫面**：`manifest.webmanifest`＋`icons/`（「旅」字＋虛線路線，PIL 畫的）。`scope` 刻意設成 `/index.html`，
   點進行程網站時會開在 App 內建的瀏覽器（有「完成」鈕可回來），不會卡在沒有返回鍵的全螢幕裡。**仍然不裝 service worker**。
 
@@ -33,14 +36,16 @@
 ```
 - `places` 依行程順序，地圖照這個順序連線（去過畫實線、規劃中畫虛線）。
 - `cover` 是相對於行程網站的路徑；空字串就用 `color` 色塊＋`kanji` 大字。`tentative:true` 加「日期暫定」標籤。
+- `country`（選填）：`"jp"` 或 `"tw"`，決定放在哪個分頁；不寫就依 `places` 自動判斷。
 
-## 目前的行程（2026-10-07）
+## 目前的行程（2026-10-12）
 | repo | 發布分支 | 備註 |
 |---|---|---|
 | IzuAtami-trip | claude/read-izuatami-trip-37v8zi | 2027/2/10–17 熱海・伊豆・靜岡，封面 `cover.jpg` |
 | 2025-osaka-kanazawa-miokokoen-nagano-tokyo | claude/friendly-cray-yhb83r | 2025/2/22–3/2 北陸・信州・東京（已完成） |
 | Osaka_Kyoto_Kobe | claude/optimistic-meitner-x1spay | 2027/5/27–6/3（暫定日期） |
 | TaiwanTrip2026 | claude/itinerary-url-template-e2g0to | 2026/9/26–10/5 台灣（已完成），封面 `assets/img/jiufen-1.jpg` |
+| 2027-taiwan | main | 2027/5/24–28 台東・花東縱谷・東海岸（暫定日期），無封面 |
 
 ## 注意
 - **不要在這個 repo 裝 service worker**：它在網域根目錄，scope `/` 會攔到底下所有行程網站。

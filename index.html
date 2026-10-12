@@ -67,6 +67,14 @@ a{color:inherit;text-decoration:none}
 .dots{display:flex;justify-content:center;gap:6px;padding:4px 0 2px}
 .dots i{width:7px;height:7px;border-radius:4px;background:#d9cbb6;transition:width .2s,background .2s}.dots i.on{width:20px;background:var(--acc)}
 .mhint{text-align:center;font-size:12.5px;color:var(--mute);margin:10px 0 0}
+.b-jp{background:#f6dcd6;color:#9a3328}.b-tw{background:#d3eaee;color:#1f5f6b}
+.tabs{display:inline-flex;background:var(--card);border-radius:999px;padding:4px;gap:2px;box-shadow:0 3px 10px #8c491a12}
+.tabs button{border:0;background:none;font:inherit;font-weight:800;font-size:14px;padding:8px 16px;border-radius:999px;color:var(--mute);cursor:pointer;white-space:nowrap}
+.tabs button small{font-weight:600;opacity:.75;margin-left:5px}
+.tabs button.on{background:var(--ink);color:#fff}
+.tabs button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.mapc .tabs{margin:0 0 14px}
+.mob .tabs{display:flex;margin:0 0 12px}.mob .tabs button{flex:1;padding:9px 6px}
 @media (max-width:640px){.lay{display:none}.mob{display:block}.foot{margin-top:22px}}
 @media (max-width:760px){
   .lay{grid-template-columns:1fr}.mapc{position:static;padding:8px}.wrap{padding:16px 14px 40px}
@@ -79,13 +87,15 @@ a{color:inherit;text-decoration:none}
   <div class="top"><h1 class="logo cap">旅のしおり</h1><div class="sum" id="sum">讀取中…</div></div>
   <div class="lay">
     <div class="mapc">
-      <div class="mt"><b class="cap">走過的路線</b><span class="dk">滑過右邊的行程，路線會亮起來</span><span class="mb">點下面的行程打開網站</span></div>
+      <div class="tabs" id="tabs"></div>
+      <div class="mt"><b class="cap" id="mtt">走過的路線</b><span class="dk">滑過右邊的行程，路線會亮起來</span><span class="mb">點下面的行程打開網站</span></div>
       <div id="map"></div>
       <div class="leg" id="leg"></div>
     </div>
     <div id="list"><div class="empty">讀取行程中…</div></div>
   </div>
   <div class="mob">
+    <div class="tabs" id="mtabs"></div>
     <div class="mmap" id="mmap"></div>
     <div class="car" id="car"></div>
     <div class="dots" id="dots"></div>
@@ -100,11 +110,14 @@ a{color:inherit;text-decoration:none}
    1. GitHub 公開 API 列出 OWNER 的 repo：有 GitHub Pages 的、或有 `trip` 標籤的才看
    2. 讀各行程網站上的 trip.json（同網域 /<repo>/trip.json）
    3. API 讀不到（離線、次數用完）時，改用上次的快取；連快取都沒有就試 KNOWN 清單
-   狀態（還有 N 天／旅途中／已完成）依今天的日期當場算。 */
+   狀態（還有 N 天／旅途中／已完成）依今天的日期當場算。
+   分頁「全部／日本／台灣」：國家看 trip.json 的 country（jp／tw），沒有就看 places 是不是全在台灣。 */
 const OWNER='jerry940080';
-const KNOWN=['IzuAtami-trip','2025-osaka-kanazawa-miokokoen-nagano-tokyo','Osaka_Kyoto_Kobe','TaiwanTrip2026'];
+const KNOWN=['IzuAtami-trip','2025-osaka-kanazawa-miokokoen-nagano-tokyo','Osaka_Kyoto_Kobe','TaiwanTrip2026','2027-taiwan'];
 const SELF=OWNER.toLowerCase()+'.github.io';
 const CK='hub-trips-v1';
+const CN={jp:'日本',tw:'台灣'};
+let TAB=null,DATA=null,WHEN=null;
 const TODAY=(()=>{const m=/[?&]today=(\d{4}-\d\d-\d\d)/.exec(location.search);return m?new Date(m[1]+'T12:00:00+09:00'):new Date();})();
 
 const D=s=>new Date(s+'T00:00:00+09:00');
@@ -120,6 +133,13 @@ function st(t){
 }
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+const isTW=(la,lo)=>lo>118&&lo<123&&la>21.5&&la<26.5;   // 含金門、馬祖
+function ctry(t){
+  if(CN[t.country])return t.country;
+  const P=t.places||[];
+  if(P.length)return P.every(p=>isTW(p[1],p[2]))?'tw':'jp';
+  return /台|taiwan/i.test((t.title||'')+t.repo)?'tw':'jp';
+}
 
 async function getJSON(u){const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw new Error(r.status);return r.json();}
 async function tripOf(name,repo){
@@ -145,41 +165,41 @@ async function load(){
   return {trips,api:Object.keys(repos).length>0};
 }
 
-/* ───── 地圖：台灣的點放左下角小框，其餘自動框範圍 ───── */
-let W=600,H=440;
+/* ───── 地圖：c 沒指定時台灣的點放小框、其餘自動框範圍；c='jp'／'tw' 時只框那一國 ───── */
+let W=600,H=440,MID=0;
 function frame(b,X,Y,w,h){const k=Math.cos((b.la0+b.la1)/2*Math.PI/180),s=Math.min(w/((b.lo1-b.lo0)*k),h/(b.la1-b.la0));
   return (lo,la)=>[X+w/2+(lo-(b.lo0+b.lo1)/2)*k*s,Y+h/2-(la-(b.la0+b.la1)/2)*s];}
-const isTW=(la,lo)=>lo>119&&lo<123&&la>21.5&&la<26.5;
 function bbox(pts,minLo,minLa,pad){
   let lo0=180,lo1=-180,la0=90,la1=-90;pts.forEach(([la,lo])=>{lo0=Math.min(lo0,lo);lo1=Math.max(lo1,lo);la0=Math.min(la0,la);la1=Math.max(la1,la);});
   const cl=(lo0+lo1)/2,ca=(la0+la1)/2,sl=Math.max(lo1-lo0,minLo)*(1+pad),sa=Math.max(la1-la0,minLa)*(1+pad);
   return {lo0:cl-sl/2,lo1:cl+sl/2,la0:ca-sa/2,la1:ca+sa/2};
 }
-function drawMap(trips,el,w,h,fs,legEl){W=w;H=h;fs=fs||13;
+function drawMap(trips,el,w,h,fs,legEl,c){W=w;H=h;fs=fs||13;const id=++MID;
   const all=[].concat(...trips.map(t=>(t.places||[]).map(p=>[p[1],p[2]])));
   const tw=all.filter(p=>isTW(...p)),jp=all.filter(p=>!isTW(...p));
-  const inset=tw.length&&jp.length;
+  const inset=!c&&tw.length&&jp.length;
   const ih=Math.round(H*.42),iw=Math.round(ih*.7),mg=W<500?10:14;
   let IB={x:mg,y:H-ih-mg,w:iw,h:ih};
   let main,pT=null,TB=null;
-  if(!all.length){main=frame({lo0:128,lo1:146,la0:30,la1:45},0,0,W,H);}
+  if(!all.length)main=c==='tw'?frame({lo0:119.6,lo1:122.4,la0:21.7,la1:25.5},0,0,W,H):frame({lo0:128,lo1:146,la0:30,la1:45},0,0,W,H);
   else if(inset){
     // 台灣小框放在四個角落中「沒有壓到任何路線點」的那個；都壓到就把主圖範圍放大再試
     const CORN=[{x:W-iw-mg,y:H-ih-mg},{x:mg,y:H-ih-mg},{x:mg,y:mg},{x:W-iw-mg,y:mg}];
     let pad=.18,ok=null;
     for(let i=0;i<8&&!ok;i++,pad+=.25){
       const b=bbox(jp,5,3.5,pad),f=frame(b,0,0,W,H),P=jp.map(([la,lo])=>f(lo,la));
-      for(const c of CORN){const box={x:c.x-10,y:c.y-10,w:iw+20,h:ih+20};
-        if(!P.some(p=>p[0]>box.x&&p[0]<box.x+box.w&&p[1]>box.y&&p[1]<box.y+box.h)){ok={f,c};break;}}
+      for(const cc of CORN){const box={x:cc.x-10,y:cc.y-10,w:iw+20,h:ih+20};
+        if(!P.some(p=>p[0]>box.x&&p[0]<box.x+box.w&&p[1]>box.y&&p[1]<box.y+box.h)){ok={f,c:cc};break;}}
       if(!ok&&i===7)ok={f,c:CORN[0]};
     }
     main=ok.f;IB={x:ok.c.x,y:ok.c.y,w:iw,h:ih};TB=bbox(tw,2.2,3,.12);pT=frame(TB,IB.x,IB.y,IB.w,IB.h);
-  }else main=frame(bbox(all,4,3,.2),0,0,W,H);
+  }else if(!jp.length)main=frame(bbox(all,2.6,3.4,.12),0,0,W,H);   // 只有台灣：整個島框進來
+  else main=frame(bbox(all,4,3,.2),0,0,W,H);
   const px=(la,lo)=>inset&&isTW(la,lo)?pT(lo,la):main(lo,la);
   const ring=(f,r)=>'M'+r.map(p=>f(p[0],p[1]).map(v=>v.toFixed(1)).join(',')).join('L')+'Z';
-  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="走過的路線地圖"><defs><clipPath id="ct${W}"><rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12"/></clipPath></defs><rect width="${W}" height="${H}" fill="#d7e3ea"/>`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="走過的路線地圖"><defs><clipPath id="ct${id}"><rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12"/></clipPath></defs><rect width="${W}" height="${H}" fill="#d7e3ea"/>`;
   s+=`<path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.map(r=>ring(main,r)).join('')}"/>`;
-  if(inset)s+=`<rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12" fill="#d7e3ea" stroke="#b9a98f" stroke-width="1.5"/><g clip-path="url(#ct${W})"><path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.filter(r=>r.some(p=>p[0]>TB.lo0-2&&p[0]<TB.lo1+2&&p[1]>TB.la0-2&&p[1]<TB.la1+2)).map(r=>ring(pT,r)).join('')}"/></g><text x="${IB.x+10}" y="${IB.y+17}" font-size="11" fill="#7c6f62" font-family="Noto Sans TC">台灣</text>`;
+  if(inset)s+=`<rect x="${IB.x}" y="${IB.y}" width="${IB.w}" height="${IB.h}" rx="12" fill="#d7e3ea" stroke="#b9a98f" stroke-width="1.5"/><g clip-path="url(#ct${id})"><path fill="#ece6d8" stroke="#cbbfa9" stroke-width=".6" d="${LAND.filter(r=>r.some(p=>p[0]>TB.lo0-2&&p[0]<TB.lo1+2&&p[1]>TB.la0-2&&p[1]<TB.la1+2)).map(r=>ring(pT,r)).join('')}"/></g><text x="${IB.x+10}" y="${IB.y+17}" font-size="11" fill="#7c6f62" font-family="Noto Sans TC">台灣</text>`;
   const boxes=[];
   const hit=(a)=>boxes.some(b=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y);
   trips.forEach(t=>{
@@ -192,7 +212,7 @@ function drawMap(trips,el,w,h,fs,legEl){W=w;H=h;fs=fs||13;
     const lw=[...(t.kanji||'')].length*(fs+2)+16,lh=fs+7;let best=null;
     for(const p of P){for(const [dx,dy] of [[10,-lh-6],[10,6],[-lw-10,-lh-6],[-lw-10,6]]){const b={x:p[0]+dx,y:p[1]+dy,w:lw,h:lh};
       if(b.x<4||b.y<4||b.x+b.w>W-4||b.y+b.h>H-4)continue;if(!hit(b)){best=b;break;}}if(best)break;}
-    if(!best)best={x:P[0][0]+10,y:P[0][1]-lh-6,w:lw,h:lh};boxes.push(best);
+    if(!best)best={x:Math.max(4,Math.min(W-lw-4,P[0][0]+10)),y:Math.max(4,P[0][1]-lh-6),w:lw,h:lh};boxes.push(best);
     s+=`<g transform="translate(${best.x.toFixed(1)},${best.y.toFixed(1)})"><rect width="${lw}" height="${lh}" rx="${lh/2}" fill="${esc(t.color)}"/><text x="8" y="${(lh/2+fs*.36).toFixed(1)}" font-size="${fs}" font-weight="800" fill="#fff" font-family="Noto Sans TC,sans-serif">${esc(t.kanji)}</text></g></g>`;
   });
   s+='</svg>';
@@ -200,22 +220,22 @@ function drawMap(trips,el,w,h,fs,legEl){W=w;H=h;fs=fs||13;
   if(legEl)legEl.innerHTML='<span><u></u>去過</span><span><u class="d"></u>規劃中</span>'+trips.filter(t=>t.places&&t.places.length).map(t=>`<span><i style="background:${esc(t.color)}"></i>${esc(t.title)}</span>`).join('');
 }
 
-function cardHTML(t){
+function cardHTML(t,flag){
   const s=st(t);const cv=t.cover?`<div class="cv" style="background-image:url('${esc(t.cover)}')"></div>`:`<div class="cv"><div class="kan">${esc(t.kanji||'')}</div></div>`;
-  const b=`<span class="badge b-${t.offline?'off':s.k}">${t.offline?'網站未上線':s.lab}</span>`+(t.tentative?'<span class="badge b-tent">日期暫定</span>':'');
+  const b=`<span class="badge b-${t.offline?'off':s.k}">${t.offline?'網站未上線':s.lab}</span>`+(t.tentative?'<span class="badge b-tent">日期暫定</span>':'')+(flag?`<span class="badge b-${ctry(t)}">${CN[ctry(t)]}</span>`:'');
   const meta=t.start?`<div class="m">${rng(t)}・${s.n} 天</div>`:'';
   const pl=(t.places||[]).map(p=>p[0]).filter((x,i,a)=>x!==a[i-1]);
   return `<a class="it" href="${esc(t.url)}" data-r="${esc(t.repo)}" style="--c:${esc(t.color)}">${cv}<div class="b"><div class="badges">${b}</div><h3 class="cap">${esc(t.title)}</h3>${meta}${pl.length?`<div class="m">${esc(pl.join(' → '))}</div>`:''}</div></a>`;
 }
 /* ───── 手機（≤640px）：地圖在上、卡片左右滑，滑到哪趟地圖就亮哪趟 ───── */
-function renderMob(trips){
+function renderMob(trips,flag,c){
   const rank=t=>{const k=st(t).k;return k==='now'?0:k==='plan'?1:k==='done'?2:3;};
   const L=trips.slice().sort((a,b)=>rank(a)-rank(b)||(rank(a)===2?((b.start||'')>(a.start||'')?1:-1):((a.start||'9999')>(b.start||'9999')?1:-1)));
   const car=document.getElementById('car'),dots=document.getElementById('dots'),mm=document.getElementById('mmap');
-  drawMap(L,mm,390,330,15);
+  drawMap(L,mm,390,330,15,null,c);
   car.innerHTML=L.length?L.map(t=>{const s=st(t);const cv=t.cover?`<div class="cv" style="background-image:url('${esc(t.cover)}')"></div>`:`<div class="kan">${esc(t.kanji||'')}</div>`;
     const pl=(t.places||[]).map(p=>p[0]).filter((x,i,a)=>x!==a[i-1]&&!/機場/.test(x));
-    return `<a class="mc" href="${esc(t.url)}" data-r="${esc(t.repo)}" style="--c:${esc(t.color)}">${cv}<div class="b"><div class="badges"><span class="badge b-${t.offline?'off':s.k}">${t.offline?'網站未上線':s.lab}</span>${t.tentative?'<span class="badge b-tent">日期暫定</span>':''}</div><h3 class="cap">${esc(t.title)}</h3>${t.start?`<div class="m">${rng(t)}・${s.n} 天</div>`:''}${pl.length?`<div class="m">${esc(pl.join(' → '))}</div>`:''}<span class="go">打開行程 →</span></div></a>`;}).join(''):'<div class="empty" style="flex:1">還沒有讀到任何行程。</div>';
+    return `<a class="mc" href="${esc(t.url)}" data-r="${esc(t.repo)}" style="--c:${esc(t.color)}">${cv}<div class="b"><div class="badges"><span class="badge b-${t.offline?'off':s.k}">${t.offline?'網站未上線':s.lab}</span>${t.tentative?'<span class="badge b-tent">日期暫定</span>':''}${flag?`<span class="badge b-${ctry(t)}">${CN[ctry(t)]}</span>`:''}</div><h3 class="cap">${esc(t.title)}</h3>${t.start?`<div class="m">${rng(t)}・${s.n} 天</div>`:''}${pl.length?`<div class="m">${esc(pl.join(' → '))}</div>`:''}<span class="go">打開行程 →</span></div></a>`;}).join(''):'<div class="empty" style="flex:1">這一區還沒有行程。</div>';
   dots.innerHTML=L.map(()=>'<i></i>').join('');
   const cards=[...car.querySelectorAll('.mc')];let cur=-1;
   const sel=i=>{if(i===cur||!cards[i])return;cur=i;const r=cards[i].dataset.r;
@@ -227,13 +247,20 @@ function renderMob(trips){
   sel(0);
 }
 function render(data,when){
-  const trips=data.trips.slice().sort((a,b)=>(b.start||'9999')>(a.start||'9999')?1:-1);
+  DATA=data;WHEN=when;
+  const all=data.trips.slice().sort((a,b)=>(b.start||'9999')>(a.start||'9999')?1:-1);
+  const g={jp:all.filter(t=>ctry(t)==='jp'),tw:all.filter(t=>ctry(t)==='tw')};
+  if(TAB===null)TAB=lsGet('hub-tab');if(TAB!=='jp'&&TAB!=='tw')TAB='all';
+  const c=TAB==='all'?null:TAB,flag=!c,trips=c?g[c]:all;
+  const tabs=[['all','全部',all.length],['jp','日本',g.jp.length],['tw','台灣',g.tw.length]].map(([k,n,x])=>`<button type="button" data-t="${k}" class="${TAB===k?'on':''}" aria-pressed="${TAB===k}">${n}<small>${x}</small></button>`).join('');
+  ['tabs','mtabs'].forEach(id=>{const el=document.getElementById(id);el.innerHTML=tabs;el.querySelectorAll('button').forEach(b=>b.onclick=()=>{TAB=b.dataset.t;lsSet('hub-tab',TAB);render(DATA,WHEN);});});
+  document.getElementById('mtt').textContent=c?CN[c]+'的路線':'走過的路線';
   const ys={};trips.forEach(t=>{const y=t.start?t.start.slice(0,4):'未定';(ys[y]=ys[y]||[]).push(t);});
-  document.getElementById('list').innerHTML=trips.length?Object.keys(ys).sort().reverse().map(y=>`<div class="yr cap">${y}</div><div class="tl">${ys[y].map(cardHTML).join('')}</div>`).join(''):'<div class="empty">還沒有讀到任何行程。行程 repo 要開 GitHub Pages，並在網站根目錄放 trip.json。</div>';
-  drawMap(trips,document.getElementById('map'),600,440,13,document.getElementById('leg'));
-  renderMob(trips);
-  const cnt={plan:0,done:0};trips.forEach(t=>{const k=st(t).k;if(k==='done')cnt.done++;else if(k!=='off')cnt.plan++;});
-  document.getElementById('sum').textContent=`${trips.length} 趟・去過 ${cnt.done}・規劃中 ${cnt.plan}`;
+  document.getElementById('list').innerHTML=trips.length?Object.keys(ys).sort().reverse().map(y=>`<div class="yr cap">${y}</div><div class="tl">${ys[y].map(t=>cardHTML(t,flag)).join('')}</div>`).join(''):all.length?'<div class="empty">這一區還沒有行程。</div>':'<div class="empty">還沒有讀到任何行程。行程 repo 要開 GitHub Pages，並在網站根目錄放 trip.json。</div>';
+  drawMap(trips,document.getElementById('map'),600,440,13,document.getElementById('leg'),c);
+  renderMob(trips,flag,c);
+  const cnt={plan:0,done:0};all.forEach(t=>{const k=st(t).k;if(k==='done')cnt.done++;else if(k!=='off')cnt.plan++;});
+  document.getElementById('sum').textContent=`${all.length} 趟・去過 ${cnt.done}・規劃中 ${cnt.plan}`;
   document.getElementById('foot').innerHTML=`資料${when?'更新於 '+when:'來自上次的快取'}，每次打開都會從 GitHub 重新讀取。新增行程：行程 repo 開 GitHub Pages，網站根目錄放 <code>trip.json</code>（標題、日期、地點）就會自動出現；加上 <code>trip</code> 標籤，網站還沒上線也會列出來。`;
   const hl=r=>document.querySelectorAll('#map .rt').forEach(g=>g.style.opacity=!r||g.dataset.r===r?1:.15);
   document.querySelectorAll('.it').forEach(a=>{a.onmouseenter=()=>hl(a.dataset.r);a.onmouseleave=()=>hl(null);});
