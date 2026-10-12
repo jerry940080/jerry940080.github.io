@@ -34,13 +34,14 @@
 - `places` 依行程順序，地圖照這個順序連線（去過畫實線、規劃中畫虛線）。
 - `cover` 是相對於行程網站的路徑；空字串就用 `color` 色塊＋`kanji` 大字。`tentative:true` 加「日期暫定」標籤。
 
-## 目前的行程（2026-10-07）
+## 目前的行程（2026-10-12）
 | repo | 發布分支 | 備註 |
 |---|---|---|
 | IzuAtami-trip | claude/read-izuatami-trip-37v8zi | 2027/2/10–17 熱海・伊豆・靜岡，封面 `cover.jpg` |
 | 2025-osaka-kanazawa-miokokoen-nagano-tokyo | claude/friendly-cray-yhb83r | 2025/2/22–3/2 北陸・信州・東京（已完成） |
 | Osaka_Kyoto_Kobe | claude/optimistic-meitner-x1spay | 2027/5/27–6/3（暫定日期） |
 | TaiwanTrip2026 | claude/itinerary-url-template-e2g0to | 2026/9/26–10/5 台灣（已完成），封面 `assets/img/jiufen-1.jpg` |
+| 2027-taiwan | main | 2027/5/24–28 台東・花東縱谷・東海岸（暫定日期），無封面 |
 
 ## 注意
 - **不要在這個 repo 裝 service worker**：它在網域根目錄，scope `/` 會攔到底下所有行程網站。
