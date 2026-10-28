@@ -46,7 +46,7 @@
 | Osaka_Kyoto_Kobe | claude/optimistic-meitner-x1spay | 2027/5/27–6/3（暫定日期） |
 | TaiwanTrip2026 | claude/itinerary-url-template-e2g0to | 2026/9/26–10/5 台灣（已完成），封面 `assets/img/jiufen-1.jpg` |
 | 2027-taiwan | main | 2027/5/24–28 台東・花東縱谷・東海岸（暫定日期），無封面 |
-| Oita_Fukoka_2026 | main | 2026/2/25–3/2 大分・由布院・日田・福岡・小倉（已完成，回憶錄模式），Pages 待開啟，封面待補 |
+| Oita_Fukoka_2026 | main | 2026/2/25–3/2 大分・由布院・日田・福岡・小倉（已完成，回憶錄模式），封面 `cover.jpg`（金鱗湖鳥居） |
 
 ## 注意
 - **不要在這個 repo 裝 service worker**：它在網域根目錄，scope `/` 會攔到底下所有行程網站。
