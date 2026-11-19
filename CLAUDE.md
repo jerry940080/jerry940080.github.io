@@ -22,6 +22,8 @@
 - **加到主畫面**：`manifest.webmanifest`＋`icons/`（「旅」字＋虛線路線，PIL 畫的）。`scope` 刻意設成 `/index.html`，
   點進行程網站時會開在 App 內建的瀏覽器（有「完成」鈕可回來），不會卡在沒有返回鍵的全螢幕裡。**仍然不裝 service worker**。
 
+- **trip-tools 入口（2026-11-19）**：標題列右邊一顆膠囊按鈕「🧰 trip-tools 記帳・回憶錄排版」連到 `/trip-tools/`（同分頁開）；手機版只留「🧰 trip-tools」，和摘要文字上下疊在右邊，標題不換行。
+
 ## 資料怎麼來（每次打開首頁時即時讀）
 1. GitHub 公開 API `users/jerry940080/repos`：挑出有 GitHub Pages、或有 `trip` 標籤的 repo（排除本 repo 與 fork）。
 2. 讀每個行程網站上的 `/<repo>/trip.json`（同網域，不受 API 次數限制）。讀得到就是一張卡；讀不到但有 `trip` 標籤的，顯示 repo 簡介＋「網站未上線」。
@@ -38,7 +40,7 @@
 - `cover` 是相對於行程網站的路徑；空字串就用 `color` 色塊＋`kanji` 大字。`tentative:true` 加「日期暫定」標籤。
 - `country`（選填）：`"jp"` 或 `"tw"`，決定放在哪個分頁；不寫就依 `places` 自動判斷。
 
-## 目前的行程（2026-10-12）
+## 目前的行程（2026-10-28）
 | repo | 發布分支 | 備註 |
 |---|---|---|
 | IzuAtami-trip | claude/read-izuatami-trip-37v8zi | 2027/2/10–17 熱海・伊豆・靜岡，封面 `cover.jpg` |
@@ -46,8 +48,10 @@
 | Osaka_Kyoto_Kobe | claude/optimistic-meitner-x1spay | 2027/5/27–6/3（暫定日期） |
 | TaiwanTrip2026 | claude/itinerary-url-template-e2g0to | 2026/9/26–10/5 台灣（已完成），封面 `assets/img/jiufen-1.jpg` |
 | 2027-taiwan | main | 2027/5/24–28 台東・花東縱谷・東海岸（暫定日期），無封面 |
+| Oita_Fukoka_2026 | main | 2026/2/25–3/2 大分・由布院・日田・福岡・小倉（已完成，回憶錄模式），封面 `cover.jpg`（金鱗湖鳥居） |
 
 ## 注意
 - **不要在這個 repo 裝 service worker**：它在網域根目錄，scope `/` 會攔到底下所有行程網站。
+- 各行程網站的 `sw.js` 共用同一個網域的 Cache Storage，activate 時只能清自己前綴（`izu-`／`kyu-`／`hkr-`／`tte-`）的舊快取，不能 `k!==V` 全刪。2026-10-28 已全部修好；Osaka_Kyoto_Kobe、TaiwanTrip2026 沒有 service worker。
 - 地圖：台灣的點自動放進小框（選四個角落裡沒壓到路線點的那個），其餘依所有點自動框範圍。
 - 驗證：本機用一個資料夾把各行程 repo 以 symlink 掛成子目錄、`python3 -m http.server`，Playwright 用 `page.route` 假造 GitHub API 回應。
