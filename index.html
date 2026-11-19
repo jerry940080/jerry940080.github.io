@@ -25,6 +25,11 @@ a{color:inherit;text-decoration:none}
 .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:18px}
 .logo{font-size:28px;margin:0}
 .sum{color:var(--mute);font-size:13px}
+.tr{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.tool{display:inline-flex;align-items:center;gap:6px;background:var(--card);color:var(--ink);text-decoration:none;font-weight:800;font-size:14px;padding:8px 14px;border-radius:999px;box-shadow:0 3px 10px #8c491a1a;border:1px solid var(--line);white-space:nowrap}
+.tool small{font-weight:600;font-size:11.5px;color:var(--mute)}
+.tool:hover{border-color:var(--acc)}.tool:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media (max-width:640px){.top{align-items:center}.logo{white-space:nowrap}.tr{flex-direction:column;align-items:flex-end;gap:6px}.tr .sum{font-size:12px}.tool small{display:none}.tool{padding:7px 12px;font-size:13px}}
 .lay{display:grid;grid-template-columns:1.25fr 1fr;gap:22px;align-items:start}
 .mapc{background:var(--card);border-radius:26px;padding:12px;position:sticky;top:16px;box-shadow:0 8px 24px #8c491a14}
 .mapc svg{display:block;width:100%;height:auto;border-radius:18px}
@@ -84,7 +89,7 @@ a{color:inherit;text-decoration:none}
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1 class="logo cap">旅のしおり</h1><div class="sum" id="sum">讀取中…</div></div>
+  <div class="top"><h1 class="logo cap">旅のしおり</h1><div class="tr"><div class="sum" id="sum">讀取中…</div><a class="tool" href="/trip-tools/" title="記帳、花費、餐廳推薦、回憶錄排版">🧰 trip-tools<small>記帳・回憶錄排版</small></a></div></div>
   <div class="lay">
     <div class="mapc">
       <div class="tabs" id="tabs"></div>

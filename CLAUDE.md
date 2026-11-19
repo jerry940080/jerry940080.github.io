@@ -22,6 +22,8 @@
 - **加到主畫面**：`manifest.webmanifest`＋`icons/`（「旅」字＋虛線路線，PIL 畫的）。`scope` 刻意設成 `/index.html`，
   點進行程網站時會開在 App 內建的瀏覽器（有「完成」鈕可回來），不會卡在沒有返回鍵的全螢幕裡。**仍然不裝 service worker**。
 
+- **trip-tools 入口（2026-11-19）**：標題列右邊一顆膠囊按鈕「🧰 trip-tools 記帳・回憶錄排版」連到 `/trip-tools/`（同分頁開）；手機版只留「🧰 trip-tools」，和摘要文字上下疊在右邊，標題不換行。
+
 ## 資料怎麼來（每次打開首頁時即時讀）
 1. GitHub 公開 API `users/jerry940080/repos`：挑出有 GitHub Pages、或有 `trip` 標籤的 repo（排除本 repo 與 fork）。
 2. 讀每個行程網站上的 `/<repo>/trip.json`（同網域，不受 API 次數限制）。讀得到就是一張卡；讀不到但有 `trip` 標籤的，顯示 repo 簡介＋「網站未上線」。
